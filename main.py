@@ -46,10 +46,10 @@ RTA_EMOTES = (
     # ("rtaChan", "-.", "green"),
     # ("rtaKappa", "-.", "#ffeae2"),
 
-    ("rtaPolice", "--", "#7891b8"),
-    ("rtaKabe", "--", "#bf927a"),
-    ("rtaListen", "--", "#5eb0ff"),
-    ("rtaSleep", "--", "#ff8000"),
+    ("rtaPolice", "-.", "#7891b8"),
+    ("rtaKabe", "-.", "#bf927a"),
+    ("rtaListen", "-.", "#5eb0ff"),
+    ("rtaSleep", "-.", "#ff8000"),
     # ("rtaCafe", "--", "#a44242"),
     # ("rtaDot", "--", "#ff3291"),
 
