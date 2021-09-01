@@ -9,6 +9,7 @@ from collections import Counter
 from itertools import chain
 from multiprocessing import Pool
 from operator import itemgetter
+from copy import copy
 
 from sudachipy import tokenizer, dictionary
 import jaconv
@@ -67,7 +68,7 @@ RTA_EMOTES = (
     # ("rtaGogo", ":", "#df4f69"),
     # ("rtaPokan", ":", "#838187"),
 
-    (("草", "LUL"), "--", "green"),
+    (("草", "ｗｗｗ", "LUL"), "--", "green"),
     ("無敵時間", "--", "red"),
     ("かわいい", "--", "#ff3291"),
     ("〜ケンカ", "--", "orange"),
@@ -257,6 +258,15 @@ class Message:
 
         if parts:
             self.msg.add(''.join(parts))
+
+        #
+        kusa = False
+        for word in copy(self.msg):
+            if set(word) & set(('w', 'ｗ')):
+                kusa = True
+                self.msg.remove(word)
+        if kusa:
+            self.msg.add("ｗｗｗ")
 
         message = message.strip()
         if not self.msg and message:
