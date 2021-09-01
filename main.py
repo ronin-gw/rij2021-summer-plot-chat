@@ -79,6 +79,8 @@ RTA_EMOTES = (
     ("ファイナル", "--", "gray"),
     ("サクラチル", "--", "#ffe0e0"),
 )
+# VOCABULARY = set(w for w, _, _, in RTA_EMOTES if isinstance(w, str))
+# VOCABULARY |= set(chain(*(w for w, _, _, in RTA_EMOTES if isinstance(w, tuple))))
 
 # (title, movie start time as timestamp, offset hour, min, sec)
 GAMES = (
@@ -180,7 +182,7 @@ PER_SECONDS = 60
 DPI = 200
 ROW = 6
 PAGES = 4
-YMAX = 500
+YMAX = 750
 WIDTH = 3840
 HEIGHT = 2160
 
@@ -294,19 +296,26 @@ def _parse_chat(paths):
         if m.datetime <= currentwindow:
             _messages.append(m)
         else:
-            timeline.append((currentwindow, Counter(_ for _ in chain(*(m.words for m in _messages)))))
+            timeline.append((currentwindow, *_make_timepoint(_messages)))
             while True:
                 currentwindow += WINDOW
                 if m.datetime <= currentwindow:
                     _messages = [m]
                     break
                 else:
-                    timeline.append((currentwindow, Counter()))
+                    timeline.append((currentwindow, 0, Counter()))
 
     if _messages:
-        timeline.append((currentwindow, Counter(_ for _ in chain(*(m.words for m in _messages)))))
+        timeline.append((currentwindow, *_make_timepoint(_messages)))
 
     return timeline
+
+
+def _make_timepoint(messages):
+    total = len(messages)
+    counts = Counter(_ for _ in chain(*(m.words for m in messages)))
+
+    return total, counts
 
 
 def _load_timeline(paths):
@@ -322,7 +331,7 @@ def _load_timeline(paths):
 
 
 def _save_counts(timeline):
-    _, counters = zip(*timeline)
+    _, _, counters = zip(*timeline)
 
     counter = Counter()
     for c in counters:
@@ -345,11 +354,11 @@ def _plot(timeline):
         for i in range(1, 1 + ROW):
             nrow = i + ROW * (npage - 1)
             f, t = chunklen * (nrow - 1), chunklen * nrow
-            x, y = zip(*timeline[f:t])
+            x, c, y = zip(*timeline[f:t])
             _x = tuple(t.replace(tzinfo=None) for t in x)
 
             ax = fig.add_subplot(ROW, 1, i)
-            _plot_row(ax, _x, y, i == 1)
+            _plot_row(ax, _x, y, c, i == 1, i == ROW)
 
         fig.suptitle(f"RTA in Japan Summer 2021 チャット頻出スタンプ・単語 ({npage}/{PAGES})",
                      color=FONT_COLOR, size="x-large")
@@ -363,7 +372,7 @@ def moving_average(x, w=AVR_WINDOW):
     return np.convolve(x, np.ones(w), "same") / w
 
 
-def _plot_row(ax, x, y, add_legend):
+def _plot_row(ax, x, y, total, add_upper_legend, add_lower_legend):
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M", tz=TIMEZONE))
     ax.xaxis.set_major_locator(mdates.HourLocator())
     ax.xaxis.set_minor_locator(mdates.MinuteLocator(range(0, 60, 5)))
@@ -375,6 +384,9 @@ def _plot_row(ax, x, y, add_legend):
     ax.tick_params(colors=FONT_COLOR, which="both")
     ax.set_xlim(x[0], x[-1])
     ax.set_ylim(0, YMAX)
+
+    total = moving_average(total) * PER_SECONDS
+    total = ax.plot(x, total, color=BACKGROUND_COLOR)
 
     for game in GAMES:
         if x[0] <= game.startat <= x[-1]:
@@ -391,14 +403,22 @@ def _plot_row(ax, x, y, add_legend):
         _y = moving_average(_y) * PER_SECONDS
         ax.plot(x, _y, label="\n".join(words), linestyle=style, color=(color if color else None))
 
-    if add_legend:
+    if add_upper_legend:
         leg = ax.legend(bbox_to_anchor=(1.01, 1), loc="upper left")
-        frame = leg.get_frame()
-        frame.set_facecolor(FACE_COLOR)
-        frame.set_edgecolor(FRAME_COLOR)
+        _set_legend(leg)
 
-        for text in leg.get_texts():
-            text.set_color(FONT_COLOR)
+    if add_lower_legend:
+        leg = ax.legend([total[0]], ["メッセージ / 分"], bbox_to_anchor=(1.01, 1), loc="upper left")
+        _set_legend(leg)
+
+
+def _set_legend(leg):
+    frame = leg.get_frame()
+    frame.set_facecolor(FACE_COLOR)
+    frame.set_edgecolor(FRAME_COLOR)
+
+    for text in leg.get_texts():
+        text.set_color(FONT_COLOR)
 
 
 def _main():
